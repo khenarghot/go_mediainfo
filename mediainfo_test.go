@@ -2,10 +2,12 @@ package mediainfo_test
 
 import (
 	"fmt"
-	"github.com/zhulik/go_mediainfo"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"github.com/khenarghot/go_mediainfo"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -15,57 +17,46 @@ const (
 )
 
 func TestOpenWithOgg(t *testing.T) {
+	assert := assert.New(t)
 	mi := mediainfo.NewMediaInfo()
-	error := mi.OpenFile(ogg)
-	if error != nil {
-		t.Fail()
-	}
+	assert.NoError(mi.OpenFile(ogg))
 }
 
 func TestOpenWithMp3(t *testing.T) {
+	assert := assert.New(t)
 	mi := mediainfo.NewMediaInfo()
-	error := mi.OpenFile(mp3)
-	if error != nil {
-		t.Fail()
-	}
+	assert.NoError(mi.OpenFile(mp3))
 }
 
 func TestOpenWithUnexistsFile(t *testing.T) {
+	assert := assert.New(t)
 	mi := mediainfo.NewMediaInfo()
-	error := mi.OpenFile(nonExists)
-	if error == nil {
-		t.Fail()
-	}
+	assert.Error(mi.OpenFile(nonExists))
 }
 
 func TestOpenMemoryWithOgg(t *testing.T) {
+	assert := assert.New(t)
 	mi := mediainfo.NewMediaInfo()
 	f, _ := os.Open(ogg)
 	bytes, _ := ioutil.ReadAll(f)
 
-	error := mi.OpenMemory(bytes)
-	if error != nil {
-		t.Fail()
-	}
+	assert.NoError(mi.OpenMemory(bytes))
 }
 
 func TestOpenMemoryWithMp3(t *testing.T) {
+	assert := assert.New(t)
 	mi := mediainfo.NewMediaInfo()
 	f, _ := os.Open(mp3)
 	bytes, _ := ioutil.ReadAll(f)
 
-	error := mi.OpenMemory(bytes)
-	if error != nil {
-		t.Fail()
-	}
+	assert.NoError(mi.OpenMemory(bytes))
 }
 
 func TestOpenMemoryWithEmptyArray(t *testing.T) {
+	assert := assert.New(t)
 	mi := mediainfo.NewMediaInfo()
-	error := mi.OpenMemory([]byte{})
-	if error == nil {
-		t.Fail()
-	}
+	assert.Error(mi.OpenMemory([]byte{}))
+
 }
 
 func TestInformWithOgg(t *testing.T) {
@@ -105,57 +96,47 @@ func TestAvailableParametersWithMp3(t *testing.T) {
 }
 
 func TestDurationWithOgg(t *testing.T) {
+	assert := assert.New(t)
 	mi := mediainfo.NewMediaInfo()
 	mi.OpenFile(ogg)
 
-	if mi.Duration() != 3494 {
-		t.Fail()
-	}
+	assert.Equal(3494, mi.Duration())
 }
 
 func TestDurationWithMp3(t *testing.T) {
+	assert := assert.New(t)
 	mi := mediainfo.NewMediaInfo()
 	mi.OpenFile(mp3)
 
-	if mi.Duration() != 87771 {
-		t.Fail()
-	}
+	assert.Equal(87771, mi.Duration())
 }
 
 func TestCodecWithOgg(t *testing.T) {
+	assert := assert.New(t)
 	mi := mediainfo.NewMediaInfo()
 	mi.OpenFile(ogg)
-
-	if mi.Codec() != "OGG" {
-		t.Fail()
-	}
+	assert.Equal("Ogg", mi.Codec())
 }
 
 func TestCodecWithMp3(t *testing.T) {
+	assert := assert.New(t)
 	mi := mediainfo.NewMediaInfo()
 	mi.OpenFile(mp3)
-
-	if mi.Codec() != "MPEG Audio" {
-		t.Fail()
-	}
+	assert.Equal("MPEG Audio", mi.Codec())
 }
 
 func TestFormatWithOgg(t *testing.T) {
+	assert := assert.New(t)
 	mi := mediainfo.NewMediaInfo()
 	mi.OpenFile(ogg)
-
-	if mi.Format() != "OGG" {
-		t.Fail()
-	}
+	assert.Equal("Ogg", mi.Format())
 }
 
 func TestFormatWithMp3(t *testing.T) {
+	assert := assert.New(t)
 	mi := mediainfo.NewMediaInfo()
 	mi.OpenFile(mp3)
-
-	if mi.Format() != "MPEG Audio" {
-		t.Fail()
-	}
+	assert.Equal("MPEG Audio", mi.Format())
 }
 
 //----------------------------------------------------------------------------------------------------------------------
