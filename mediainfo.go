@@ -3,19 +3,38 @@ package mediainfo
 // #cgo CFLAGS: -DUNICODE
 // #cgo LDFLAGS: -lz -lzen -lpthread -lstdc++ -lmediainfo -ldl
 // #include "go_mediainfo.h"
+// #include <MediaInfoDLL/MediaInfoDLL.h>
 import "C"
 
 import (
+	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"runtime"
 	"strconv"
 	"unsafe"
+)
+
+var (
+	ErrorOpenFile = errors.New("Failed open file")
+	ErrorMemmoryOpen = errors.New("Failed get mediainfo from memmory")
 )
 
 // MediaInfo - represents MediaInfo class, all interaction with libmediainfo through it
 type MediaInfo struct {
 	handle unsafe.Pointer
 }
+
+const (
+	StreamGeneral int = iota
+	StreamVideo
+	StreamAudio
+	StreamText
+	StreamOther
+	StreamImage
+	StreamMenu
+)
 
 func init() {
 	C.setlocale(C.LC_CTYPE, C.CString(""))
@@ -29,11 +48,51 @@ func init() {
 // NewMediaInfo - constructs new MediaInfo
 func NewMediaInfo() *MediaInfo {
 	result := &MediaInfo{handle: C.GoMediaInfo_New()}
-	runtime.SetFinalizer(result, func(f *MediaInfo) {
-		f.Close()
-		C.GoMediaInfo_Delete(f.handle)
+	runtime.SetFinalizer(result, func(h *MediaInfo) {
+		C.GoMediaInfo_Close(h.handle)
+		C.GoMediaInfo_Delete(h.handle)
 	})
 	return result
+}
+
+// Open - get MediaInfo for given file path
+func Open(path string) (mi *MediaInfo, err error) {
+	handle := C.GoMediaInfo_New()
+	p :=  C.CString(path)
+	defer C.free(unsafe.Pointer(p))
+	if C.GoMediaInfo_OpenFile(handle, p) != 1 {
+		return nil, fmt.Errorf("%w: %s", ErrorOpenFile, path)
+	}
+
+	mi =&MediaInfo{handle: handle}
+	runtime.SetFinalizer(mi, func(h *MediaInfo) {
+		C.GoMediaInfo_Close(h.handle)
+		C.GoMediaInfo_Delete(h.handle)
+		// TODO: check for memmory leak
+	})
+	return
+}
+
+// Read - use generic io.Reader as data source. Dangerouse beacous of
+// usage inmemory buffer
+func Read(r io.Reader) (mi *MediaInfo, err error) {
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return
+	}
+	handle := C.GoMediaInfo_New()
+	rc := C.GoMediaInfo_OpenMemory(handle,
+		(*C.char)(unsafe.Pointer(&b[0])), C.size_t(len(b)))
+	if rc != 0 {
+		return nil, ErrorMemmoryOpen
+	}
+	mi =&MediaInfo{handle: handle}
+	runtime.SetFinalizer(mi, func(h *MediaInfo) {
+		C.GoMediaInfo_Close(h.handle)
+		C.GoMediaInfo_Delete(h.handle)
+		// TODO: check for memmory leak
+	})
+	return
 }
 
 // OpenFile - opens file
@@ -74,6 +133,16 @@ func (mi *MediaInfo) Get(param string) (result string) {
 	return
 }
 
+// GetStream - get single stream information (only for the first one)
+func (mi *MediaInfo) GetStream(stream int, param string) (result string) {
+	p := C.CString(param)
+	defer C.free(unsafe.Pointer(p))
+	resp := C.GoMediaInfoStreamGet(mi.handle, C.MediaInfo_stream_C(stream), p)
+	result = C.GoString(resp)
+	C.free(unsafe.Pointer(resp))
+	return
+}
+
 // Inform returns string with summary file information, like mediainfo util
 func (mi *MediaInfo) Inform() (result string) {
 	r := C.GoMediaInfoInform(mi.handle)
@@ -107,7 +176,7 @@ func (mi *MediaInfo) Duration() int {
 
 // Codec returns file codec
 func (mi *MediaInfo) Codec() string {
-	return mi.Get("Codec")
+	return mi.Get("Format")
 }
 
 // Format returns file codec

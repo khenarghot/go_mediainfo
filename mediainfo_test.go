@@ -13,6 +13,7 @@ import (
 const (
 	ogg       = "testdata/test.ogg"
 	mp3       = "testdata/test.mp3"
+	ts        = "testdata/test.ts"
 	nonExists = "testdata/non_exists.ogg"
 )
 
@@ -137,6 +138,19 @@ func TestFormatWithMp3(t *testing.T) {
 	mi := mediainfo.NewMediaInfo()
 	mi.OpenFile(mp3)
 	assert.Equal("MPEG Audio", mi.Format())
+}
+
+func TestMpegTS(t *testing.T) {
+	assert := assert.New(t)
+	mi, err := mediainfo.Open(ts)
+	assert.NoError(err)
+
+	assert.Equal("MPEG-TS", mi.GetStream(mediainfo.StreamGeneral, "Format"))
+	assert.Equal("AAC", mi.GetStream(mediainfo.StreamAudio, "Format"))
+	assert.Equal("AVC", mi.GetStream(mediainfo.StreamVideo, "Format"))
+	assert.Equal("1280", mi.GetStream(mediainfo.StreamVideo, "Width"))
+	assert.Equal("720", mi.GetStream(mediainfo.StreamVideo, "Height"))
+	assert.Equal("3014333", mi.GetStream(mediainfo.StreamGeneral, "OverallBitRate"))
 }
 
 //----------------------------------------------------------------------------------------------------------------------
