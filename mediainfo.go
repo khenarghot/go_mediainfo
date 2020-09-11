@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	ErrorOpenFile = errors.New("Failed open file")
+	ErrorOpenFile    = errors.New("Failed open file")
 	ErrorMemmoryOpen = errors.New("Failed get mediainfo from memmory")
+	ErrorEmptyReader = errors.New("No data in reader. Failed init MediaInfo")
 )
 
 // MediaInfo - represents MediaInfo class, all interaction with libmediainfo through it
@@ -58,13 +59,13 @@ func NewMediaInfo() *MediaInfo {
 // Open - get MediaInfo for given file path
 func Open(path string) (mi *MediaInfo, err error) {
 	handle := C.GoMediaInfo_New()
-	p :=  C.CString(path)
+	p := C.CString(path)
 	defer C.free(unsafe.Pointer(p))
 	if C.GoMediaInfo_OpenFile(handle, p) != 1 {
 		return nil, fmt.Errorf("%w: %s", ErrorOpenFile, path)
 	}
 
-	mi =&MediaInfo{handle: handle}
+	mi = &MediaInfo{handle: handle}
 	runtime.SetFinalizer(mi, func(h *MediaInfo) {
 		C.GoMediaInfo_Close(h.handle)
 		C.GoMediaInfo_Delete(h.handle)
@@ -80,13 +81,17 @@ func Read(r io.Reader) (mi *MediaInfo, err error) {
 	if err != nil {
 		return
 	}
+	if len(b) == 0 {
+		return nil, ErrorEmptyReader
+	}
+
 	handle := C.GoMediaInfo_New()
 	rc := C.GoMediaInfo_OpenMemory(handle,
 		(*C.char)(unsafe.Pointer(&b[0])), C.size_t(len(b)))
-	if rc != 0 {
+	if rc != 1 {
 		return nil, ErrorMemmoryOpen
 	}
-	mi =&MediaInfo{handle: handle}
+	mi = &MediaInfo{handle: handle}
 	runtime.SetFinalizer(mi, func(h *MediaInfo) {
 		C.GoMediaInfo_Close(h.handle)
 		C.GoMediaInfo_Delete(h.handle)

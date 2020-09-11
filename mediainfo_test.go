@@ -153,6 +153,26 @@ func TestMpegTS(t *testing.T) {
 	assert.Equal("3014333", mi.GetStream(mediainfo.StreamGeneral, "OverallBitRate"))
 }
 
+func TestMpegTSReader(t *testing.T) {
+	assert := assert.New(t)
+	fd, err := os.Open(ts)
+	if !assert.NoError(err) {
+		assert.FailNow("Failed open vidoe for reader test")
+	}
+
+	mi, err := mediainfo.Read(fd)
+	if !assert.NoError(err) {
+		assert.FailNow("Failed get info from reader")
+	}
+
+	assert.Equal("MPEG-TS", mi.GetStream(mediainfo.StreamGeneral, "Format"))
+	assert.Equal("AAC", mi.GetStream(mediainfo.StreamAudio, "Format"))
+	assert.Equal("AVC", mi.GetStream(mediainfo.StreamVideo, "Format"))
+	assert.Equal("1280", mi.GetStream(mediainfo.StreamVideo, "Width"))
+	assert.Equal("720", mi.GetStream(mediainfo.StreamVideo, "Height"))
+	assert.Equal("3014333", mi.GetStream(mediainfo.StreamGeneral, "OverallBitRate"))
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 func BenchmarkOpenAndDurationWithOgg(b *testing.B) {
 	for n := 0; n < b.N; n++ {
